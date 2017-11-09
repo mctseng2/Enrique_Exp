@@ -7,8 +7,8 @@ library(plotrix)
 # install.packages("stringr")
 #install.packages("plotrix")
 
-setwd("C:/Users/Meng-Chun/OneDrive - University of Illinois - Urbana/Thesis/uruguay/Enrique_Exp/analysis/Aug23/")
-setwd("C:/Users/mctseng2/OneDrive - University of Illinois - Urbana/Thesis/uruguay/Enrique_Exp/analysis/Aug23/")
+setwd("C:/Users/Meng-Chun/OneDrive - University of Illinois - Urbana/Thesis/uruguay/Enrique_Exp/analysis/Aug23/") #home
+setwd("C:/Users/mctseng2/OneDrive - University of Illinois - Urbana/Thesis/uruguay/Enrique_Exp/analysis/Aug23/") #office
 
 
 #read seprate data
@@ -141,28 +141,46 @@ hist(total_agc_risk)
 yield_scaled_agc_risk <- total_agc_risk/(combined_data$Yield*1000) #PAF m3/kg rice
 hist(yield_scaled_agc_risk)
 
+
+
+##calculate input related env & social cost
+#include C02 (From Hill et al., 2009 PNAS) and Pesticide (Env, Dev and Sustainability (2005) 7: 229-252)
+#carbon: $120/ton, pesticide: $20/kg
+
+ES_cost<- cbind(pesticide_quan*20, CO2*0.12)  #usd20 per kg pesticide , USD 0.12/kg CO2
+colnames(ES_cost) <- paste0(colnames(ES_cost),".cost")
+Input_EnvSoc_cost <- rowSums(ES_cost)
+yield_scaled_Input_EnvSoc_cost <- Input_EnvSoc_cost/(combined_data$Yield*1000)
+
+
+
 #put all calculated indicators into a new df
-output <- data.frame(Yield=combined_data$Yield,NUE=combined_data$NUE,EUE,NEY,total_c_footprint,yield_scaled_c_footprint,total_agc_risk,yield_scaled_agc_risk)
+output <- data.frame(Yield=combined_data$Yield,NUE=combined_data$NUE,EUE,NEY,
+                     total_c_footprint,yield_scaled_c_footprint,total_agc_risk,
+                     yield_scaled_agc_risk, Input_EnvSoc_cost, yield_scaled_Input_EnvSoc_cost)
 #adding tags
 output <- cbind(combined_data[,1:4],output)
-write.table(output,"exp_indicators.csv",sep=",",row.names = F)
+
 
 #putting letters
 levels(output$Location) = c("Ricon de Ramirez","Cebollati","India Muerta","Treinta y Tres/San Francisco")
 
 colnames(output)
-# [1] "Location"                 "Trt"                      "Block"                    "Year"                     "Yield"                    "NUE"                      "EUE"                     
-# [8] "NEY"                      "total_c_footprint"        "yield_scaled_c_footprint" "total_agc_risk"           "yield_scaled_agc_risk"
+# [1] "Location"                       "Trt"                            "Block"                          "Year"                           "Yield"                         
+# [6] "NUE"                            "EUE"                            "NEY"                            "total_c_footprint"              "yield_scaled_c_footprint"      
+# [11] "total_agc_risk"                 "yield_scaled_agc_risk"          "Input_EnvSoc_cost"              "yield_scaled_Input_EnvSoc_cost"
 
-
+write.table(output,"exp_indicators.csv",sep=",",row.names = F)
 #aggrigate data by year, location and treatment
 Exp_data_summary = group_by(output,Location,Trt,Year) %>%
-  summarise(se_Yield=std.error(Yield),Yield=mean(Yield,na.rm=F),se_NUE=std.error(NUE),NUE=mean(NUE),
-            se_EUE=std.error(EUE),EUE=mean(EUE),se_NEY=std.error(NEY),NEY=mean(NEY),
-            se_total_c_footprint=std.error(total_c_footprint),total_c_footprint=mean(total_c_footprint,na.rm=F),
-            se_yield_scaled_c_footprint=std.error(yield_scaled_c_footprint),yield_scaled_c_footprint=mean(yield_scaled_c_footprint,na.rm=F),
-            se_total_agc_risk=std.error(total_agc_risk),total_agc_risk=mean(total_agc_risk,na.rm=F),
-            se_yield_scaled_agc_risk=std.error(yield_scaled_agc_risk),yield_scaled_agc_risk=mean(yield_scaled_agc_risk,na.rm=F),
+  summarise(se_Yield=std.error(Yield), Yield=mean(Yield,na.rm=F), se_NUE=std.error(NUE), NUE=mean(NUE),
+            se_EUE=std.error(EUE), EUE=mean(EUE), se_NEY=std.error(NEY), NEY=mean(NEY),
+            se_total_c_footprint=std.error(total_c_footprint), total_c_footprint=mean(total_c_footprint,na.rm=F),
+            se_yield_scaled_c_footprint=std.error(yield_scaled_c_footprint), yield_scaled_c_footprint=mean(yield_scaled_c_footprint,na.rm=F),
+            se_total_agc_risk=std.error(total_agc_risk), total_agc_risk=mean(total_agc_risk,na.rm=F),
+            se_yield_scaled_agc_risk=std.error(yield_scaled_agc_risk), yield_scaled_agc_risk=mean(yield_scaled_agc_risk, na.rm=F),
+            se_Input_EnvSoc_cost=std.error(Input_EnvSoc_cost), Input_EnvSoc_cost=mean(Input_EnvSoc_cost, na.rm=F),
+            se_yield_scaled_Input_EnvSoc_cost=std.error(yield_scaled_Input_EnvSoc_cost), yield_scaled_Input_EnvSoc_cost=mean(yield_scaled_Input_EnvSoc_cost, na.rm=F),
             n=n())
 
 #################################
@@ -178,18 +196,21 @@ Exp_Sum.all = group_by(output,Trt) %>%
             se_yield_scaled_c_footprint=std.error(yield_scaled_c_footprint),yield_scaled_c_footprint=mean(yield_scaled_c_footprint,na.rm=T),
             se_total_agc_risk=std.error(total_agc_risk),total_agc_risk=mean(total_agc_risk,na.rm=T),
             se_yield_scaled_agc_risk=std.error(yield_scaled_agc_risk),yield_scaled_agc_risk=mean(yield_scaled_agc_risk,na.rm=T),
+            se_Input_EnvSoc_cost=std.error(Input_EnvSoc_cost), Input_EnvSoc_cost=mean(Input_EnvSoc_cost, na.rm=T),
+            se_yield_scaled_Input_EnvSoc_cost=std.error(yield_scaled_Input_EnvSoc_cost), yield_scaled_Input_EnvSoc_cost=mean(yield_scaled_Input_EnvSoc_cost, na.rm=T),
             n=n())
 
-ref <- Exp_Sum.all[c(1,7),-grep("se",colnames(Exp_Sum2))]
-Exp_Sum.all.nomalized <-Exp_Sum.all[,-grep("se",colnames(Exp_Sum2))]
+ref <- Exp_Sum.all[c(1,7),-grep("se",colnames(Exp_Sum.all))] #this is our baseline
+Exp_Sum.all.nomalized <-Exp_Sum.all[,-grep("se",colnames(Exp_Sum.all))] #this is total data without se
 
 for(i in seq(nrow(Exp_Sum.all))){
-    for(j in 2:(ncol(Exp_Sum.all[c(1,7),-grep("se",colnames(Exp_Sum2))]))) {
+    for(j in 2:(ncol(Exp_Sum.all[c(1,7),-grep("se",colnames(Exp_Sum.all))]))) {
     Exp_Sum.all.nomalized[i,j] <- (Exp_Sum.all.nomalized[i,j]/ref[ifelse(i<=6,1,2),j])-1
    
-}}
+    }} #normalization
+
 colnames(Exp_Sum.all.nomalized) <- paste0(colnames(Exp_Sum.all.nomalized),"_change")
-out <- cbind(Exp_Sum.all[,-grep("se",colnames(Exp_Sum2))],Exp_Sum.all.nomalized)
+out <- cbind(Exp_Sum.all[,-grep("se",colnames(Exp_Sum.all))],Exp_Sum.all.nomalized)
 out[,order(colnames(out))]%>%write.table("Means_all_yr_loc.csv",sep=",",row.names = F)
 
 
@@ -202,6 +223,7 @@ Exp_Sum.yr1_2 = group_by(output,Trt,Year) %>%
             se_yield_scaled_c_footprint=std.error(yield_scaled_c_footprint),yield_scaled_c_footprint=mean(yield_scaled_c_footprint,na.rm=T),
             se_total_agc_risk=std.error(total_agc_risk),total_agc_risk=mean(total_agc_risk,na.rm=T),
             se_yield_scaled_agc_risk=std.error(yield_scaled_agc_risk),yield_scaled_agc_risk=mean(yield_scaled_agc_risk,na.rm=T),
+            se_Input_EnvSoc_cost=std.error(Input_EnvSoc_cost), Input_EnvSoc_cost=mean(Input_EnvSoc_cost, na.rm=F),
             n=n())
 
 #output yr n
@@ -220,8 +242,7 @@ for(n in 1:2){
   colnames(Exp_Sum.yrn.nomalized) <- paste0(colnames(Exp_Sum.yrn.nomalized),"_change")
   out <- cbind(Exp_Sum.yrn[,-grep("se",colnames(Exp_Sum.yrn))],Exp_Sum.yrn.nomalized)
   out[,order(colnames(out))]%>%write.table(paste0("Means_all_yr_loc_yr",n,".csv"),sep=",",row.names = F)
-  
-  
+
 }
 
 
