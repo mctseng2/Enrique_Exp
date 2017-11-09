@@ -114,7 +114,7 @@ detach(combined_data)
 combined_data <- cbind(combined_data,CO2)
 combined_data <- cbind(combined_data,energy)
 
-save.image("RTR_1011.RData")
+
 
 #calulate energy use efficiency
 NEY <- (combined_data$energy_yield-rowSums(energy[,1:8]))/1e3  #GJ/Ha
@@ -245,6 +245,57 @@ for(n in 1:2){
 
 }
 
+
+##Paused here 11/9
+
+
+save.image("RTR_1109.RData")
+
+
+library(MASS)
+
+str(output)
+#boxcox transformation
+lm <- lm(NUE~Location+Trt+Year+Year:Block+Location:Trt, data=output)
+anova(lm)
+par(mfrow=c(2,2))
+plot(lm)
+
+
+lm$residuals%>%shapiro.test()
+
+boxcox(lm,lambda=seq(0,1,by=.1))
+#use lambda = 0.1
+
+lm.1 <- lm(NUE^0.1~Location+Trt+Year+Year:Block+Location:Trt, data=output)
+anova(lm.1)
+lm.1$residuals%>%shapiro.test()
+#same
+par(mfrow=c(2,2))
+plot(lm.1)
+
+
+
+str(output)
+#boxcox transformation
+lm.2 <- lm(yield_scaled_c_footprint~Location+Trt+Year+Year:Block+Location:Trt, data=output)
+anova(lm.2)
+
+lm.2$residuals%>%shapiro.test()
+par(mfrow=c(2,2))
+plot(lm.2)
+
+
+
+boxcox(lm.2,lambda=seq(0,1,by=.1))
+#use lambda = 0.4
+
+lm.3 <- lm(NUE^0.4~Location+Trt+Year+Year:Block+Location:Trt, data=output)
+anova(lm.3)
+lm.3$residuals%>%shapiro.test()
+#same
+par(mfrow=c(2,2))
+plot(lm.3)
 
 
 
