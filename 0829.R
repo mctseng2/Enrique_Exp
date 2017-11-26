@@ -1,7 +1,7 @@
-library(dplyr)
 library(ggplot2)
 library(stringr)
 library(plotrix)
+library(tidyverse)
 # install.packages("dplyr")
 # install.packages("ggplot2")
 # install.packages("stringr")
@@ -73,7 +73,7 @@ for(i in seq(nrow(combined_data))){
 combined_data <- cbind(combined_data,pesticide_risk)
 
 #just to check for potential errors
-write.table(combined_data,"test.csv",sep=",",row.names = F)
+#write.table(combined_data,"test.csv",sep=",",row.names = F)
 
 
 
@@ -250,7 +250,7 @@ for(n in 1:2){
 
 
 save.image("RTR_1109.RData")
-
+load("RTR_1109.RData")
 
 library(MASS)
 
@@ -264,10 +264,10 @@ plot(lm)
 
 lm$residuals%>%shapiro.test()
 
-boxcox(lm,lambda=seq(0,1,by=.1))
-#use lambda = 0.1
+boxcox(lm,lambda=seq(-3,3,by=.1))
+#use lambda = -0.5
 
-lm.1 <- lm(NUE^0.1~Location+Trt+Year+Year:Block+Location:Trt, data=output)
+lm.1 <- lm(NUE^-0.5~Location+Trt+Year+Year:Block+Location:Trt, data=output)
 anova(lm.1)
 lm.1$residuals%>%shapiro.test()
 #same
@@ -287,10 +287,10 @@ plot(lm.2)
 
 
 
-boxcox(lm.2,lambda=seq(0,1,by=.1))
-#use lambda = 0.4
+boxcox(lm.2,lambda=seq(-3,3,by=.1))
+#use lambda = -0.4
 
-lm.3 <- lm(NUE^0.4~Location+Trt+Year+Year:Block+Location:Trt, data=output)
+lm.3 <- lm(NUE^-0.4~Location+Trt+Year+Year:Block+Location:Trt, data=output)
 anova(lm.3)
 lm.3$residuals%>%shapiro.test()
 #same
@@ -417,5 +417,141 @@ p+geom_bar(stat="identity",position="dodge")+
   facet_wrap(~Location)
 
 
+#Nov 26: plotting for comparing trt 1 and 7 in each loc, 2 years seprately
 
 
+
+#plot for year 1
+#create se columns first
+temp <- Exp_data_summary %>% filter(Trt==1|Trt==7, Year==1) %>% select(Location, Trt, se_Yield, se_NUE, se_NEY, se_EUE) %>%
+  gather(key= indicator, value=se, -(1:2))  %>%
+  mutate(indicator=sub("se_","",indicator)) %>% #clean se_ for joining
+  mutate(indicator=factor(indicator,levels=c("Yield", "NUE", "NEY", "EUE"))) 
+
+#x11(20,6)
+jpeg(filename= paste0(Sys.Date(),"_Resource_use_efficiency_year1n.jpeg"),width=20, height=6, units="in", quality=70, res=300)
+Exp_data_summary %>% filter(Trt==1|Trt==7, Year==1) %>% select(Location, Trt, Yield, NUE, NEY, EUE) %>%
+  gather(key= indicator, value=Y, -(1:2))  %>%
+  mutate(indicator=factor(indicator,levels=c("Yield", "NUE", "NEY", "EUE"))) %>% #this is to maintain desired order of plots in grid
+  left_join(temp)%>% # add standard erors
+  mutate(indicator=plyr::revalue(indicator, c("Yield"="Yield", "NUE"= "Nitrogen Use Efficiency", "NEY"= "Net Energy Yield", "EUE"= "Energy Use Efficiency"))) %>%
+  mutate(Treatment=factor(ifelse(Trt==1,"HYFP", "BMPP"))) %>%
+  ggplot(aes(x=Location, fill=Treatment, y=Y ))+
+  geom_bar(position="dodge", stat="identity") + facet_wrap(~indicator, scales = "free") +
+  geom_errorbar(aes(ymin=Y-se,ymax=Y+se),position =position_dodge(0.9),width=.2)+
+  ylab("") #discard unwanted labels
+dev.off()
+
+
+
+#plot for year 2
+#create se columns first
+temp <- Exp_data_summary %>% filter(Trt==1|Trt==7, Year==2) %>% select(Location, Trt, se_Yield, se_NUE, se_NEY, se_EUE) %>%
+  gather(key= indicator, value=se, -(1:2))  %>%
+  mutate(indicator=sub("se_","",indicator)) %>% #clean se_ for joining
+  mutate(indicator=factor(indicator,levels=c("Yield", "NUE", "NEY", "EUE"))) 
+
+#x11(20,6)
+jpeg(filename= paste0(Sys.Date(),"_Resource_use_efficiency_year1.jpeg"),width=20, height=6, units="in", quality=70, res=300)
+Exp_data_summary %>% filter(Trt==1|Trt==7, Year==2) %>% select(Location, Trt, Yield, NUE, NEY, EUE) %>%
+  gather(key= indicator, value=Y, -(1:2))  %>%
+  mutate(indicator=factor(indicator,levels=c("Yield", "NUE", "NEY", "EUE"))) %>% #this is to maintain desired order of plots in grid
+  left_join(temp)%>% # add standard erors
+  mutate(indicator=plyr::revalue(indicator, c("Yield"="Yield", "NUE"= "Nitrogen Use Efficiency", "NEY"= "Net Energy Yield", "EUE"= "Energy Use Efficiency"))) %>%
+  mutate(Treatment=factor(ifelse(Trt==1,"HYFP", "BMPP"))) %>%
+  ggplot(aes(x=Location, fill=Treatment, y=Y ))+
+  geom_bar(position="dodge", stat="identity") + facet_wrap(~indicator, scales = "free") +
+  geom_errorbar(aes(ymin=Y-se,ymax=Y+se),position =position_dodge(0.9),width=.2)+
+  ylab("") #discard unwanted labels
+dev.off()
+
+
+
+#plot for envionemental footprint
+
+#plot for year 1
+#create se columns first
+temp <- Exp_data_summary %>% filter(Trt==1|Trt==7, Year==1) %>% 
+  select(Location, Trt, se_total_c_footprint, se_yield_scaled_c_footprint, se_total_agc_risk, se_yield_scaled_agc_risk, se_Input_EnvSoc_cost, se_yield_scaled_Input_EnvSoc_cost) %>%
+  gather(key= indicator, value=se, -(1:2))  %>%
+  mutate(indicator=sub("se_","",indicator))  #clean se_ for joining
+
+#x11(18,9)
+jpeg(filename= paste0(Sys.Date(),"_Environmental_footprint_year1.jpeg"),width=18, height=9, units="in", quality=70, res=300)
+Exp_data_summary %>% filter(Trt==1|Trt==7, Year==1) %>% 
+  select(Location, Trt, total_c_footprint, yield_scaled_c_footprint, total_agc_risk, yield_scaled_agc_risk, Input_EnvSoc_cost, yield_scaled_Input_EnvSoc_cost) %>%
+  gather(key= indicator, value=Y, -(1:2))  %>%
+  mutate(indicator=factor(indicator,levels=c("total_c_footprint", "yield_scaled_c_footprint", "total_agc_risk", "yield_scaled_agc_risk", "Input_EnvSoc_cost", "yield_scaled_Input_EnvSoc_cost"))) %>% #this is to maintain desired order of plots in grid
+  left_join(temp)%>% # add standard erors
+  filter(Location != "Treinta y Tres/San Francisco") %>% #remove Treinta y Tres/San Francisco due to lack of information
+  mutate(indicator=plyr::revalue(indicator, c("total_c_footprint"="Carbon Footprint", "yield_scaled_c_footprint"= "Yield-scaled Carbon Footprint", "total_agc_risk"= "Agrochemical Contamination Risk", 
+                                              "yield_scaled_agc_risk"= "Yield-scaled Agrochemical Contamination Risk", "Input_EnvSoc_cost" ="Environemntal and Social Cost", "yield_scaled_Input_EnvSoc_cost"="Yield-scaled Environemntal and Social Cost"))) %>%
+  mutate(Treatment=factor(ifelse(Trt==1,"HYFP", "BMPP"))) %>%
+  ggplot(aes(x=Location, fill=Treatment, y=Y ))+
+  geom_bar(position="dodge", stat="identity") + facet_wrap(~indicator, scales = "free") +
+  geom_errorbar(aes(ymin=Y-se,ymax=Y+se),position =position_dodge(0.9),width=.2)+
+  ylab("") #discard unwanted labels
+dev.off()
+
+
+
+#plot for year 2
+#create se columns first
+temp <- Exp_data_summary %>% filter(Trt==1|Trt==7, Year==2) %>% 
+  select(Location, Trt, se_total_c_footprint, se_yield_scaled_c_footprint, se_total_agc_risk, se_yield_scaled_agc_risk, se_Input_EnvSoc_cost, se_yield_scaled_Input_EnvSoc_cost) %>%
+  gather(key= indicator, value=se, -(1:2))  %>%
+  mutate(indicator=sub("se_","",indicator))  #clean se_ for joining
+
+#x11(18,9)
+jpeg(filename= paste0(Sys.Date(),"_Environmental_footprint_year2.jpeg"),width=18, height=9, units="in", quality=70, res=300)
+Exp_data_summary %>% filter(Trt==1|Trt==7, Year==2) %>% 
+  select(Location, Trt, total_c_footprint, yield_scaled_c_footprint, total_agc_risk, yield_scaled_agc_risk, Input_EnvSoc_cost, yield_scaled_Input_EnvSoc_cost) %>%
+  gather(key= indicator, value=Y, -(1:2))  %>%
+  mutate(indicator=factor(indicator,levels=c("total_c_footprint", "yield_scaled_c_footprint", "total_agc_risk", "yield_scaled_agc_risk", "Input_EnvSoc_cost", "yield_scaled_Input_EnvSoc_cost"))) %>% #this is to maintain desired order of plots in grid
+  left_join(temp)%>% # add standard erors
+  mutate(indicator=plyr::revalue(indicator, c("total_c_footprint"="Carbon Footprint", "yield_scaled_c_footprint"= "Yield-scaled Carbon Footprint", "total_agc_risk"= "Agrochemical Contamination Risk", 
+                                              "yield_scaled_agc_risk"= "Yield-scaled Agrochemical Contamination Risk", "Input_EnvSoc_cost" ="Environemntal and Social Cost", "yield_scaled_Input_EnvSoc_cost"="Yield-scaled Environemntal and Social Cost"))) %>%
+  mutate(Treatment=factor(ifelse(Trt==1,"HYFP", "BMPP"))) %>%
+  ggplot(aes(x=Location, fill=Treatment, y=Y ))+
+  geom_bar(position="dodge", stat="identity") + facet_wrap(~indicator, scales = "free") +
+  geom_errorbar(aes(ymin=Y-se,ymax=Y+se),position =position_dodge(0.9),width=.2)+
+  ylab("") #discard unwanted labels
+dev.off()
+
+
+#draw percentage plots
+#carbon footprint
+#x11(10,10)
+jpeg(filename= paste0(Sys.Date(),"_Pct_CF_Season1and2.jpeg"),width=18, height=9, units="in", quality=70, res=300)
+combined_data %>% select(Location,Trt,Block,Year, dplyr::contains("CO2")) %>% 
+  filter(Trt==1|Trt==7) %>%
+  mutate(Treatment=factor(ifelse(Trt==1,"HYFP (1)", "BMPP (7)"))) %>%
+  gather(Source, Carbon_Footprint, -c(1:4, 13)) %>%
+  mutate(Source=sub("_CO2", "", Source)) %>%
+  group_by(Treatment, Source) %>%
+    summarise(Carbon_Footprint=sum(Carbon_Footprint, na.rm=T)) %>%
+    group_by(Treatment) %>%
+    mutate(Percent=Carbon_Footprint/sum(Carbon_Footprint)) %>% 
+    select(Percent, Source) %>%
+      ggplot() + theme_bw() +
+      geom_bar(aes(y = Percent, x = Treatment, fill = Source), stat="identity") +
+      ggtitle("Compostion of Carbon Footprint, Season 1-2 (%)")
+dev.off()
+
+#eneygy consumption
+#x11(10,10)
+jpeg(filename= paste0(Sys.Date(),"_Pct_EnergyComsumption_Season1and2.jpeg"),width=18, height=9, units="in", quality=70, res=300)
+combined_data %>% select(Location,Trt,Block,Year, dplyr::contains("Energy")) %>% select(-energy_yield) %>%
+  filter(Trt==1|Trt==7) %>%
+  mutate(Treatment=factor(ifelse(Trt==1,"HYFP (1)", "BMPP (7)"))) %>%
+  gather(Source, Energy, -c(1:4, 13)) %>%
+  mutate(Source=sub("_Energy", "", Source)) %>%
+  group_by(Treatment, Source) %>%
+  summarise(Energy=sum(Energy, na.rm=T)) %>%
+  group_by(Treatment) %>%
+  mutate(Percent=Energy/sum(Energy)) %>% 
+  select(Percent, Source) %>%
+  ggplot() + theme_bw() +
+  geom_bar(aes(y = Percent, x = Treatment, fill = Source), stat="identity") +
+  ggtitle("Compostion of Energy Comsumption, Season 1-2 (%)")
+dev.off()
